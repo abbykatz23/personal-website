@@ -82,6 +82,15 @@
     .btn-podcast  { background: #8B5CF6; }
     .btn-linkedin { background: #0A66C2; }
     .btn-resume   { background: #F59E0B; }
+    .btn-train {
+      background: #E11D48;
+      animation: glow 2.8s ease-in-out infinite;
+    }
+
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 4px 0 rgba(225,29,72,0.5); }
+      50%      { box-shadow: 0 0 12px 3px rgba(225,29,72,0.65); }
+    }
 
     .icon {
       width: 20px;
@@ -128,6 +137,15 @@
           <polyline points="10 9 9 9 8 9"/>
         </svg>
         Resume
+      </a>
+
+      <a class="btn btn-train" href="https://makeatrain.netlify.app" target="_blank" rel="noopener">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="7" y1="8" x2="17" y2="8"/>
+          <line x1="12" y1="8" x2="12" y2="17"/>
+        </svg>
+        Make me a train!
       </a>
 
     </div>
