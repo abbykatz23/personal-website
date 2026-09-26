@@ -4,11 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Abby Katz</title>
+  <meta name="description" content="Hi, I'm Abby. Welcome to my personal website! GitHub, LinkedIn, podcast, resume, and a few things I've made." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://abbykatz.netlify.app/" />
+  <meta property="og:title" content="Abby Katz" />
+  <meta property="og:description" content="Hi, I'm Abby. Welcome to my personal website! GitHub, LinkedIn, podcast, resume, and a few things I've made." />
+  <meta property="og:image" content="https://abbykatz.netlify.app/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
   <style>
     :root {
       --green: #33ff66;
       --dim: #1f9e40;
       --bg: #000;
+      --bezel: #161616;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -22,7 +32,22 @@
       color: var(--green);
       text-shadow: 0 0 4px rgba(51, 255, 102, 0.55);
       min-height: 100vh;
-      padding: 24px 16px;
+      padding: 40px 36px;
+    }
+
+    /* slight CRT curve: rounded glass inside a dark bezel, darker edges, faint glow in the middle */
+    body::before {
+      content: "";
+      pointer-events: none;
+      position: fixed;
+      inset: 8px;
+      z-index: 1;
+      border-radius: 40px / 32px;
+      box-shadow:
+        0 0 0 40px var(--bezel),
+        inset 0 0 140px rgba(0, 0, 0, 0.85),
+        inset 0 0 3px rgba(51, 255, 102, 0.25);
+      background: radial-gradient(ellipse at center, rgba(51, 255, 102, 0.06) 0%, transparent 65%);
     }
 
     /* faint CRT scanlines */
@@ -49,7 +74,7 @@
 
     ul { list-style: none; }
 
-    a {
+    #menu a {
       display: block;
       color: inherit;
       text-decoration: none;
@@ -58,14 +83,16 @@
       margin: 0 -1ch;
     }
 
-    a.selected {
+    #menu a.selected {
       background: var(--green);
       color: var(--bg);
       text-shadow: none;
     }
 
-    a::before { content: "  "; white-space: pre; }
-    a.selected::before { content: "> "; }
+    #menu a::before { content: "  "; white-space: pre; }
+    #menu a.selected::before { content: "> "; }
+
+    #history a { color: inherit; }
 
     .cursor {
       display: inline-block;
@@ -76,6 +103,21 @@
       box-shadow: 0 0 4px rgba(51, 255, 102, 0.55);
       animation: blink 1s steps(1) infinite;
     }
+
+    #typed { white-space: pre-wrap; word-break: break-all; }
+
+    /* real input stays focused (so mobile keyboards work) but is invisible;
+       what's typed is mirrored into #typed */
+    #cmd {
+      position: absolute;
+      left: -9999px;
+      opacity: 0;
+      font-size: 16px;
+    }
+
+    #prompt { cursor: text; }
+
+    .art { line-height: 1.2; }
 
     @keyframes blink { 50% { opacity: 0; } }
 
@@ -93,46 +135,275 @@
       <li><a href="https://github.com/abbykatz23" tabindex="-1" target="_blank" rel="noopener">GitHub</a></li>
       <li><a href="https://www.linkedin.com/in/abby-katz2023" tabindex="-1" target="_blank" rel="noopener">LinkedIn</a></li>
       <li><a href="https://open.spotify.com/show/6Dxks6Zao76IsLgBrapxdi" tabindex="-1" target="_blank" rel="noopener">Podcast</a></li>
-      <li><a href="Abby_Katz_Resume.pdf" tabindex="-1" target="_blank" rel="noopener">Resume</a></li>
-      <li><a href="https://makeatrain.netlify.app" tabindex="-1" target="_blank" rel="noopener">Make me a train..?</a></li>
-      <li><a href="https://dockling.netlify.app" tabindex="-1" target="_blank" rel="noopener">Make claude a duck..?</a></li>
+      <li><a href="Abby_Katz_Resume.pdf" data-aliases="resume.pdf" tabindex="-1" target="_blank" rel="noopener">Resume</a></li>
+      <li><a href="#contact" data-command="contact" tabindex="-1">Contact</a></li>
+      <li><a href="https://makeatrain.netlify.app" data-aliases="train" data-name="train designer" tabindex="-1" target="_blank" rel="noopener">Make me a train..?</a></li>
+      <li><a href="https://dockling.netlify.app" data-aliases="duck" data-name="dockling" tabindex="-1" target="_blank" rel="noopener">Make claude a duck..?</a></li>
     </ul>
 
     <div class="gap"></div>
-    <p class="dim">Use ↑/↓ to move, Enter to open.</p>
+    <p class="dim">Use ↑/↓ to move, Enter to open, or type a command (try 'help').</p>
     <div class="gap"></div>
-    <p>abby@web:~$ <span class="cursor"></span></p>
+    <div id="history"></div>
+    <p id="prompt">abby@web:~$ <span id="typed"></span><span class="cursor"></span></p>
+    <input id="cmd" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Terminal command" />
   </main>
 
   <script>
     const items = Array.from(document.querySelectorAll('#menu a'));
+    const cmd = document.getElementById('cmd');
+    const typed = document.getElementById('typed');
+    const history = document.getElementById('history');
+    let selected = 0;
+
+    // "Make me a train..?" -> "make me a train"
+    const normalize = (text) =>
+      text.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
 
     function select(i) {
+      selected = i;
       items.forEach((a, j) => a.classList.toggle('selected', j === i));
-      if (document.activeElement !== items[i]) items[i].focus({ preventScroll: true });
     }
 
-    items.forEach((a, i) => {
-      a.addEventListener('focus', () => select(i));
-      a.addEventListener('mouseenter', () => select(i));
-    });
+    function print(text, className) {
+      const line = document.createElement('p');
+      line.textContent = text;
+      if (className) line.className = className;
+      history.appendChild(line);
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    // what `ls` shows for each link: its first alias, else its label
+    const fileName = (a) => (a.dataset.aliases || a.textContent).split(',')[0].toLowerCase();
+    const files = items.map(fileName);
+    const commands = ['cat', 'cd', 'clear', 'date', 'echo', 'help', 'ls', 'pwd', 'rm', 'sudo', 'whoami'];
+
+    // ASCII cats by hjw and jgs (Joan Stark); `cat` cycles through them
+    const CATS = [
+      [
+        " ,-.       _,---._ __  / \\",
+        " /  )    .-'       `./ /   \\",
+        "(  (   ,'            `/    /|",
+        " \\  `-\"             \\'\\   / |",
+        "  `.              ,  \\ \\ /  |",
+        "   /`.          ,'-`----Y   |",
+        "  (            ;        |   '",
+        "  |  ,-.    ,-'         |  /",
+        "  |  | (   |        hjw | /",
+        "  )  |  \\  `.___________|/",
+        "  `--'   `--'",
+      ].join('\n'),
+      [
+        "                   _ |\\_",
+        "                   \\` ..\\",
+        "              __,.-\" =__Y=",
+        "            .\"        )",
+        "      _    /   ,    \\/\\_",
+        "     ((____|    )_-\\ \\_-`",
+        "jgs  `-----'`-----` `--`",
+      ].join('\n'),
+      [
+        "      \\    /\\",
+        "       )  ( ')",
+        "      (  /  )",
+        "jgs    \\(__)|",
+      ].join('\n'),
+      [
+        "(\"`-''-/\").___..--''\"`-._",
+        " `6_ 6  )   `-.  (     ).`-.__.`)",
+        " (_Y_.)'  ._   )  `._ `. ``-..-'",
+        "   _..`--'_..-_/  /--'_.'",
+        "  ((((.-''  ((((.'  (((.-'",
+      ].join('\n'),
+    ];
+    let nextCat = 0;
+
+    let busy = false;
+    let nudged = false;
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // rm github / rm -rf * / rm /: "deletes" the matching menu lines, then puts them back
+    async function fakeRemove(args) {
+      const targets = args.split(/\s+/).filter(t => t && !t.startsWith('-'));
+      if (!targets.length) {
+        print('rm: missing operand');
+        return;
+      }
+      const doomed = new Set();
+      for (const t of targets) {
+        const matches = ['/', '*', '.', '~', '~/'].includes(t)
+          ? items
+          : items.filter(a => [fileName(a), a.textContent, ...(a.dataset.aliases || '').split(',')]
+              .some(name => name && normalize(name) === normalize(t)));
+        if (matches.length) matches.forEach(a => doomed.add(a));
+        else print("rm: cannot remove '" + t + "': No such file or directory");
+      }
+      if (!doomed.size) return;
+
+      busy = true;
+      for (const a of items.filter(a => doomed.has(a))) {
+        await sleep(350);
+        a.parentElement.style.visibility = 'hidden';
+        print("removed '" + fileName(a) + "'");
+      }
+      await sleep(800);
+      doomed.forEach(a => { a.parentElement.style.visibility = ''; });
+      print('just kidding.');
+      busy = false;
+    }
+
+    function printLink(label, text, href) {
+      const line = document.createElement('p');
+      const link = document.createElement('a');
+      link.href = href;
+      link.textContent = text;
+      line.append(label, link);
+      history.appendChild(line);
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    // stored in pieces so scrapers reading the page source don't find a full address
+    function showContact() {
+      const phone = ['978', '727', '6853'];
+      const email = ['abbykatz23', 'gmail.com'].join('@');
+      printLink('phone  ', phone.join(' '), 'tel:+1' + phone.join(''));
+      printLink('email  ', email, 'mail' + 'to:' + email);
+    }
+
+    function callThePolice() {
+      print('the police are on the way');
+      window.open('https://en.wikipedia.org/wiki/Shame_on_You', '_blank', 'noopener');
+    }
+
+    function run(input) {
+      if (normalize(input) === 'clear') {
+        history.replaceChildren();
+        select(0);
+        return;
+      }
+      print('abby@web:~$ ' + input);
+      if (input.trim().replace(/\s+/g, ' ') === 'cd ..') {
+        callThePolice();
+        return;
+      }
+      if (normalize(input) === 'help') {
+        print('try:');
+        print('ls  pwd  whoami  contact  echo  date  cat  rm  sudo  clear');
+        return;
+      }
+      const i = items.findIndex(a =>
+        [a.textContent, ...(a.dataset.aliases || '').split(',')]
+          .some(name => name && normalize(name) === normalize(input)));
+      if (i >= 0 && items[i].dataset.command === 'contact') {
+        select(i);
+        showContact();
+        return;
+      }
+      if (i >= 0) {
+        select(i);
+        print('opening ' + (items[i].dataset.name || items[i].textContent) + '...');
+        items[i].click();
+        return;
+      }
+      const name = input.trim().split(/\s+/)[0];
+      const args = input.trim().slice(name.length).trim();
+      switch (name.toLowerCase()) {
+        case 'ls':     print(files.join('  ')); break;
+        case 'pwd':    print('/home/abby'); break;
+        case 'whoami': print('abby — software engineer, builder, podcaster'); break;
+        case 'sudo':   callThePolice(); break;
+        case 'rm':     fakeRemove(args); break;
+        case 'cat':    print(CATS[nextCat++ % CATS.length], 'art'); break;
+        case 'echo':   print(args); break;
+        case 'date':   print(new Date().toString().replace(/ GMT.*/, '')); break;
+        default:
+          print(name + ': command not found');
+          if (!nudged) print("(try 'help')");
+          nudged = true;
+      }
+    }
+
+    function setPrompt(value) {
+      cmd.value = value;
+      typed.textContent = value;
+    }
+
+    // bash-style: complete the command name, or a file name after it
+    function autocomplete() {
+      const words = cmd.value.split(' ');
+      const last = words.pop().toLowerCase();
+      const candidates = (words.length ? files : commands.concat(files))
+        .filter(c => c.startsWith(last));
+      if (!candidates.length) return;
+      if (candidates.length === 1) {
+        setPrompt(words.concat(candidates[0]).join(' ') + ' ');
+        return;
+      }
+      let prefix = candidates[0];
+      while (!candidates.every(c => c.startsWith(prefix))) prefix = prefix.slice(0, -1);
+      if (prefix.length > last.length) {
+        setPrompt(words.concat(prefix).join(' '));
+      } else {
+        print('abby@web:~$ ' + cmd.value);
+        print(candidates.join('  '));
+      }
+    }
+
+    function focusPrompt() {
+      cmd.focus({ preventScroll: true });
+    }
+
+    items.forEach((a, i) => a.addEventListener('mouseenter', () => select(i)));
+
+    // menu rows that run a command instead of opening a page
+    items.filter(a => a.dataset.command).forEach(a => a.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!busy) run(a.dataset.command);
+    }));
+
+    cmd.addEventListener('input', () => { typed.textContent = cmd.value; });
 
     document.addEventListener('keydown', (e) => {
-      const current = items.findIndex(a => a.classList.contains('selected'));
       if (e.key === 'Tab') {
+        e.preventDefault();
+        if (!busy) autocomplete();
+        return;
+      }
+      // the fake prompt has no movable caret, so keep the real one at the end
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home') {
         e.preventDefault();
         return;
       }
-      let next = null;
-      if (e.key === 'ArrowDown') next = current < 0 ? 0 : (current + 1) % items.length;
-      if (e.key === 'ArrowUp')   next = current < 0 ? items.length - 1 : (current - 1 + items.length) % items.length;
-      if (next !== null) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
-        select(next);
+        const step = e.key === 'ArrowDown' ? 1 : -1;
+        select((selected + step + items.length) % items.length);
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (busy) return;
+        if (cmd.value.trim()) {
+          run(cmd.value);
+          setPrompt('');
+        } else {
+          items[selected].click();
+        }
+        return;
+      }
+      // typing anywhere goes to the prompt
+      if (document.activeElement !== cmd && e.key.length === 1 && !e.metaKey && !e.ctrlKey) {
+        focusPrompt();
       }
     });
 
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('a')) focusPrompt();
+    });
+    window.addEventListener('focus', focusPrompt);
+
     select(0);
+    focusPrompt();
   </script>
 </body>
 </html>
