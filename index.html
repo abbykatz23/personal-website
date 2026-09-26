@@ -23,7 +23,14 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html, body { background: var(--bg); }
+    /* the page itself never scrolls: the rounded .screen is the scroll area,
+       so text is clipped by its curved edge instead of sliding under the bezel */
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background: var(--bezel);
+    }
 
     body {
       font-family: "DejaVu Sans Mono", "Menlo", "Consolas", "Courier New", monospace;
@@ -31,31 +38,36 @@
       line-height: 1.6;
       color: var(--green);
       text-shadow: 0 0 4px rgba(51, 255, 102, 0.55);
-      min-height: 100vh;
-      padding: 40px 36px;
+      padding: 8px;
     }
 
-    /* slight CRT curve: rounded glass inside a dark bezel, darker edges, faint glow in the middle */
-    body::before {
+    .screen {
+      position: relative;
+      height: 100%;
+      border-radius: 40px / 32px;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    /* slight CRT curve (darker edges, faint glow in the middle) and scanlines, over the text */
+    .screen::before,
+    .screen::after {
       content: "";
       pointer-events: none;
-      position: fixed;
-      inset: 8px;
+      position: absolute;
+      inset: 0;
       z-index: 1;
-      border-radius: 40px / 32px;
+      border-radius: inherit;
+    }
+
+    .screen::before {
       box-shadow:
-        0 0 0 40px var(--bezel),
         inset 0 0 140px rgba(0, 0, 0, 0.85),
         inset 0 0 3px rgba(51, 255, 102, 0.25);
       background: radial-gradient(ellipse at center, rgba(51, 255, 102, 0.06) 0%, transparent 65%);
     }
 
-    /* faint CRT scanlines */
-    body::after {
-      content: "";
-      pointer-events: none;
-      position: fixed;
-      inset: 0;
+    .screen::after {
       background: repeating-linear-gradient(
         to bottom,
         rgba(0, 0, 0, 0) 0,
@@ -63,6 +75,15 @@
         rgba(0, 0, 0, 0.25) 3px
       );
     }
+
+    .scroll {
+      height: 100%;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 32px 28px;
+      scrollbar-width: none;
+    }
+    .scroll::-webkit-scrollbar { display: none; }
 
     main { max-width: 760px; }
 
@@ -127,6 +148,7 @@
   </style>
 </head>
 <body>
+  <div class="screen"><div class="scroll" id="scroll">
   <main>
     <p>Hi, I'm Abby. Welcome to my personal website!</p>
     <div class="gap"></div>
@@ -148,12 +170,14 @@
     <p id="prompt">abby@web:~$ <span id="typed"></span><span class="cursor"></span></p>
     <input id="cmd" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Terminal command" />
   </main>
+  </div></div>
 
   <script>
     const items = Array.from(document.querySelectorAll('#menu a'));
     const cmd = document.getElementById('cmd');
     const typed = document.getElementById('typed');
     const history = document.getElementById('history');
+    const scroller = document.getElementById('scroll');
     let selected = 0;
 
     // "Make me a train..?" -> "make me a train"
@@ -170,7 +194,7 @@
       line.textContent = text;
       if (className) line.className = className;
       history.appendChild(line);
-      window.scrollTo(0, document.body.scrollHeight);
+      scroller.scrollTop = scroller.scrollHeight;
     }
 
     // what `ls` shows for each link: its first alias, else its label
@@ -259,7 +283,7 @@
       link.textContent = text;
       line.append(label, link);
       history.appendChild(line);
-      window.scrollTo(0, document.body.scrollHeight);
+      scroller.scrollTop = scroller.scrollHeight;
     }
 
     // stored in pieces so scrapers reading the page source don't find a full address
