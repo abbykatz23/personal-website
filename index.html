@@ -364,13 +364,17 @@
     cmd.addEventListener('input', () => { typed.textContent = cmd.value; });
 
     document.addEventListener('keydown', (e) => {
+      // let IME composition (e.g. Japanese/Chinese input) use Enter and arrows itself
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === 'Tab') {
         e.preventDefault();
         if (!busy) autocomplete();
         return;
       }
       // the fake prompt has no movable caret, so keep the real one at the end
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home') {
+      // (modifier combos like Alt+Left for Back are left alone)
+      const modified = e.altKey || e.ctrlKey || e.metaKey;
+      if (!modified && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home')) {
         e.preventDefault();
         return;
       }
@@ -395,6 +399,11 @@
       if (document.activeElement !== cmd && e.key.length === 1 && !e.metaKey && !e.ctrlKey) {
         focusPrompt();
       }
+    });
+
+    // clicking a link shouldn't take focus away from the prompt
+    document.addEventListener('mousedown', (e) => {
+      if (e.target.closest('a')) e.preventDefault();
     });
 
     document.addEventListener('click', (e) => {
