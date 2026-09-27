@@ -85,6 +85,14 @@
     }
     .scroll::-webkit-scrollbar { display: none; }
 
+    /* phones/tablets: no screen effects, just a plain black page that scrolls normally */
+    @media (hover: none), (max-width: 600px) {
+      html, body { height: auto; overflow: visible; background: var(--bg); }
+      body { padding: 24px 16px; }
+      .screen, .scroll { height: auto; overflow: visible; border-radius: 0; padding: 0; }
+      .screen::before, .screen::after { display: none; }
+    }
+
     main { max-width: 760px; }
 
     p { white-space: pre-wrap; }
@@ -178,6 +186,12 @@
     const typed = document.getElementById('typed');
     const history = document.getElementById('history');
     const scroller = document.getElementById('scroll');
+
+    // desktop scrolls inside the CRT screen; mobile scrolls the page itself
+    function scrollToBottom() {
+      scroller.scrollTop = scroller.scrollHeight;
+      window.scrollTo(0, document.body.scrollHeight);
+    }
     let selected = 0;
 
     // "Make me a train..?" -> "make me a train"
@@ -194,7 +208,7 @@
       line.textContent = text;
       if (className) line.className = className;
       history.appendChild(line);
-      scroller.scrollTop = scroller.scrollHeight;
+      scrollToBottom();
     }
 
     // what `ls` shows for each link: its first alias, else its label
@@ -283,7 +297,7 @@
       link.textContent = text;
       line.append(label, link);
       history.appendChild(line);
-      scroller.scrollTop = scroller.scrollHeight;
+      scrollToBottom();
     }
 
     // stored in pieces so scrapers reading the page source don't find a full address
