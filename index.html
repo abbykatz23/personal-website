@@ -85,6 +85,12 @@
     }
     .scroll::-webkit-scrollbar { display: none; }
 
+    .hint-touch { display: none; }
+    @media (hover: none) {
+      .hint-keys { display: none; }
+      .hint-touch { display: block; }
+    }
+
     /* phones/tablets: no screen effects, just a plain black page that scrolls normally */
     @media (hover: none), (max-width: 600px) {
       html, body { height: auto; overflow: visible; background: var(--bg); }
@@ -172,7 +178,8 @@
     </ul>
 
     <div class="gap"></div>
-    <p class="dim">Use ↑/↓ to move, Enter to open, or type a command (try 'help').</p>
+    <p class="dim hint-keys">Use ↑/↓ to move, Enter to open, or type a command (try 'help').</p>
+    <p class="dim hint-touch">Tap an option above or type a command (try 'help').</p>
     <div class="gap"></div>
     <div id="history"></div>
     <p id="prompt">abby@web:~$ <span id="typed"></span><span class="cursor"></span></p>
