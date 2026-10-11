@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Make Me a Train</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <meta name="description" content="A 64×64 pixel LED display in my apartment that shows live MBTA train arrival predictions, with pixel-art trains anyone can design." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://abbykatz.netlify.app/train.html" />
+  <meta property="og:title" content="MBTA Pixel Train Display" />
+  <meta property="og:description" content="A 64×64 pixel LED display in my apartment that shows live MBTA train arrival predictions, with pixel-art trains anyone can design." />
+  <meta property="og:image" content="https://abbykatz.netlify.app/media/train/orange-line.jpg" />
+  <style>
+    :root {
+      --green: #33ff66;
+      --dim: #1f9e40;
+      --bg: #000;
+      --bezel: #161616;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* same CRT screen as the home page: the rounded .screen is the scroll area */
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background: var(--bezel);
+    }
+
+    body {
+      font-family: "DejaVu Sans Mono", "Menlo", "Consolas", "Courier New", monospace;
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--green);
+      text-shadow: 0 0 4px rgba(51, 255, 102, 0.55);
+      padding: 8px;
+    }
+
+    .screen {
+      position: relative;
+      height: 100%;
+      border-radius: 40px / 32px;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    .screen::before,
+    .screen::after {
+      content: "";
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      border-radius: inherit;
+    }
+
+    .screen::before {
+      box-shadow:
+        inset 0 0 140px rgba(0, 0, 0, 0.85),
+        inset 0 0 3px rgba(51, 255, 102, 0.25);
+      background: radial-gradient(ellipse at center, rgba(51, 255, 102, 0.06) 0%, transparent 65%);
+    }
+
+    .screen::after {
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0,
+        rgba(0, 0, 0, 0) 2px,
+        rgba(0, 0, 0, 0.25) 3px
+      );
+    }
+
+    .scroll {
+      height: 100%;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 32px 28px;
+      scrollbar-width: none;
+      outline: none;
+    }
+    .scroll::-webkit-scrollbar { display: none; }
+
+    @media (hover: none), (max-width: 600px) {
+      html, body { height: auto; overflow: visible; background: var(--bg); }
+      body { padding: 24px 16px; }
+      .screen, .scroll { height: auto; overflow: visible; border-radius: 0; padding: 0; }
+      .screen::before, .screen::after { display: none; }
+    }
+
+    main { max-width: 760px; }
+
+    .dim { color: var(--dim); }
+
+    a { color: inherit; }
+    a:hover { background: var(--green); color: var(--bg); text-shadow: none; }
+
+    h1, h2 { font-size: inherit; font-weight: bold; }
+    h1 { margin-bottom: 1.6em; }
+    h2 { margin: 2.4em 0 0.8em; }
+    h2::before { content: "## "; color: var(--dim); }
+
+    p, ul, figure { margin-bottom: 1.2em; }
+
+    ul { list-style: none; }
+    li { padding-left: 2ch; text-indent: -2ch; margin-bottom: 0.6em; }
+    li::before { content: "- "; color: var(--dim); }
+
+
+    figure img, figure video {
+      display: block;
+      max-width: 100%;
+      max-height: 75vh;
+      border: 1px solid var(--dim);
+      background: #000;
+    }
+
+    figcaption { margin-top: 0.4em; font-size: 0.875em; }
+
+    .nav { margin-bottom: 1.6em; }
+
+    .back {
+      display: inline-block;
+      border: 1px solid var(--green);
+      padding: 0 1ch;
+      margin-right: 2ch;
+      text-decoration: none;
+    }
+    .nav.bottom { margin: 2.4em 0 0; }
+  </style>
+</head>
+<body>
+  <div class="screen"><div class="scroll" id="scroll" tabindex="-1">
+  <main>
+    <p class="nav"><a class="back" href="./">← back</a> <span class="dim">(or press Esc)</span></p>
+
+    <h1>MBTA Pixel Train Display</h1>
+
+    <p>I have a 64×64 pixel LED display (<a href="https://divoom.com/products/pixoo-64" target="_blank" rel="noopener">Divoom Pixoo64</a>) in my apartment that shows live MBTA train arrival predictions for the stations near me, with a little pixel-art train that animates across the screen whenever one's arriving at the station.</p>
+
+    <h2>What it does</h2>
+
+    <ul>
+      <li>Shows how many minutes I should wait until leaving my apartment to catch the T exactly as it's pulling into the platform. The numbers get brighter as it gets closer to go time.</li>
+      <li>Sends a pixel train across the screen, in the right line color, whenever one is arriving at the local station.</li>
+      <li>Mixes in trains that people design and submit on the website, with extra odds for your own train around your birthday.</li>
+      <li>Shows a live copy of the display on the website, so anyone can see what's on it right now.</li>
+      <li>Switches to a clock overnight while the T isn't running.</li>
+    </ul>
+
+    <p>You can submit a train right now at <a href="https://makeatrain.pre-idea.com" target="_blank" rel="noopener">makeatrain.pre-idea.com</a> (or <a href="https://makeatrain.netlify.app" target="_blank" rel="noopener">makeatrain.netlify.app</a> in case I don't renew my domain subscription hehe). DO IT!!! IT'S SO FUN!!! Any time a train goes by, there's a chance it'll be your train, with better odds during your birthday week!</p>
+
+    <h2>In Action (note: the red line was down when taking these videos ;) )</h2>
+
+    <p>Train times auto-update every 20 seconds:</p>
+    <figure>
+      <video src="media/train/times.mp4" controls muted loop playsinline preload="metadata"></video>
+    </figure>
+
+    <p>An animation of the appropriately-colored T car goes by when it's arrived at my local station. Left → right means it's northbound, right → left means it's southbound. At the time of taking the below photo, there was a southbound orange line train at Downtown Crossing station.</p>
+    <figure>
+      <img src="media/train/orange-line.jpg" width="1200" height="1600" loading="lazy" alt="The Pixoo display on a shelf showing train times, with an orange line train crossing the middle of the screen" />
+    </figure>
+
+    <p>And extra fun train sprites go by occasionally by chance (or by an admin manually triggering it :D). Every month gets a special train that has 1/6 odds of appearing every time a train is at the station. I of course had to get festive for July :)</p>
+    <figure>
+      <video src="media/train/july.mp4" controls muted loop playsinline preload="metadata"></video>
+    </figure>
+
+    <h2>How it fits together</h2>
+
+    <figure>
+      <a href="media/train/architecture.png" target="_blank" rel="noopener"><img src="media/train/architecture.png" width="2400" height="1952" loading="lazy" alt="Diagram of how the display, the server and the website connect" /></a>
+      <figcaption class="dim">click to enlarge, or <a href="https://excalidraw.com/#json=BRuBvz4900FrxCK2AZXIK,rJ98H-aRb1J4b7mux0_sFg" target="_blank" rel="noopener">open it in Excalidraw</a></figcaption>
+    </figure>
+
+    <p class="nav bottom"><a class="back" href="./">← back</a>   <a href="https://makeatrain.pre-idea.com" target="_blank" rel="noopener">make a train →</a></p>
+  </main>
+  </div></div>
+
+  <script>
+    // focus the screen so arrow keys / space scroll it on desktop
+    document.getElementById('scroll').focus({ preventScroll: true });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') location.href = './';
+    });
+  </script>
+</body>
+</html>
