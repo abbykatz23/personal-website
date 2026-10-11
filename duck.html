@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dockling</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <meta name="description" content="Dockling: a live duck in your macOS Dock for every Claude Code session, showing what each one is doing in real time." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://abbykatz.netlify.app/duck.html" />
+  <meta property="og:title" content="Dockling" />
+  <meta property="og:description" content="Dockling: a live duck in your macOS Dock for every Claude Code session, showing what each one is doing in real time." />
+  <meta property="og:image" content="https://img.youtube.com/vi/3aWBq6LDKag/maxresdefault.jpg" />
+  <style>
+    :root {
+      --green: #33ff66;
+      --dim: #1f9e40;
+      --bg: #000;
+      --bezel: #161616;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* same CRT screen as the home page: the rounded .screen is the scroll area */
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background: var(--bezel);
+    }
+
+    body {
+      font-family: "DejaVu Sans Mono", "Menlo", "Consolas", "Courier New", monospace;
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--green);
+      text-shadow: 0 0 4px rgba(51, 255, 102, 0.55);
+      padding: 8px;
+    }
+
+    .screen {
+      position: relative;
+      height: 100%;
+      border-radius: 40px / 32px;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    .screen::before,
+    .screen::after {
+      content: "";
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      border-radius: inherit;
+    }
+
+    .screen::before {
+      box-shadow:
+        inset 0 0 140px rgba(0, 0, 0, 0.85),
+        inset 0 0 3px rgba(51, 255, 102, 0.25);
+      background: radial-gradient(ellipse at center, rgba(51, 255, 102, 0.06) 0%, transparent 65%);
+    }
+
+    .screen::after {
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0,
+        rgba(0, 0, 0, 0) 2px,
+        rgba(0, 0, 0, 0.25) 3px
+      );
+    }
+
+    .scroll {
+      height: 100%;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 32px 28px;
+      scrollbar-width: none;
+      outline: none;
+    }
+    .scroll::-webkit-scrollbar { display: none; }
+
+    @media (hover: none), (max-width: 600px) {
+      html, body { height: auto; overflow: visible; background: var(--bg); }
+      body { padding: 24px 16px; }
+      .screen, .scroll { height: auto; overflow: visible; border-radius: 0; padding: 0; }
+      .screen::before, .screen::after { display: none; }
+    }
+
+    main { max-width: 760px; }
+
+    .dim { color: var(--dim); }
+
+    a { color: inherit; }
+    a:hover { background: var(--green); color: var(--bg); text-shadow: none; }
+
+    h1, h2 { font-size: inherit; font-weight: bold; }
+    h1 { margin-bottom: 1.6em; }
+    h2 { margin: 2.4em 0 0.8em; }
+    h2::before { content: "## "; color: var(--dim); }
+
+    p, ul, figure { margin-bottom: 1.2em; }
+
+    ul { list-style: none; }
+    li { padding-left: 2ch; text-indent: -2ch; margin-bottom: 0.6em; }
+    li::before { content: "- "; color: var(--dim); }
+
+
+    figure img, figure video {
+      display: block;
+      max-width: 100%;
+      max-height: 75vh;
+      border: 1px solid var(--dim);
+      background: #000;
+    }
+
+    figcaption { margin-top: 0.4em; font-size: 0.875em; }
+
+    .nav { margin-bottom: 1.6em; }
+
+    .back {
+      display: inline-block;
+      border: 1px solid var(--green);
+      padding: 0 1ch;
+      margin-right: 2ch;
+      text-decoration: none;
+    }
+    .nav.bottom { margin: 2.4em 0 0; }
+
+    .embed {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      max-width: 100%;
+      border: 1px solid var(--dim);
+    }
+    .embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+    /* duck sprites sit on the screen directly, without the photo border */
+    .ducks img { display: block; width: 64px; height: 64px; border: 0; background: none; }
+    .key p { margin: 0; }
+
+    .key {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.2em 2ch;
+      margin-bottom: 1.2em;
+    }
+    .key > div { display: flex; gap: 1.5ch; align-items: flex-start; }
+    .key .pics { display: flex; flex-shrink: 0; }
+    .key b { display: block; }
+    .key span { font-size: 0.875em; line-height: 1.5; }
+
+    .colors {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8em 2ch;
+      margin-bottom: 1.2em;
+    }
+    .colors figure { margin: 0; text-align: center; }
+    .colors figcaption { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <div class="screen"><div class="scroll" id="scroll" tabindex="-1">
+  <main>
+    <p class="nav"><a class="back" href="./">← back</a> <span class="dim">(or press Esc)</span></p>
+
+    <h1>Dockling</h1>
+
+    <p>A live, per-session duck in your macOS Dock for Claude Code, showing what each session is doing in real time.</p>
+
+    <figure class="embed">
+      <iframe src="https://www.youtube-nocookie.com/embed/3aWBq6LDKag" title="Dockling demo video" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+    </figure>
+
+    <h2>What it does</h2>
+
+    <ul>
+      <li>One duck in the Dock for each Claude Code session you have open, not one duck for all of them.</li>
+      <li>Each project gets its own duck color, and keeps it from then on.</li>
+      <li>Hover over a duck to see which project it belongs to.</li>
+      <li>The duck's pose changes in real time with what that session is doing (see the duck key below).</li>
+      <li>A short sound plays when a session is ready for your next message, and another when it's waiting on you to answer something.</li>
+      <li>When a session hands work off to helper agents, each helper gets its own baby duck.</li>
+    </ul>
+
+    <h2>Duck Key</h2>
+
+    <div class="key ducks">
+      <div><div class="pics"><img src="media/duck/idle.png" alt="" /></div><p><b>Idle</b><span class="dim">Just started, or finished a reply without doing any work</span></p></div>
+      <div><div class="pics"><img src="media/duck/bash.png" alt="" /></div><p><b>Running a command</b><span class="dim">Running something in the terminal</span></p></div>
+      <div><div class="pics"><img src="media/duck/edit.png" alt="" /></div><p><b>Editing</b><span class="dim">Editing a file</span></p></div>
+      <div><div class="pics"><img src="media/duck/search.png" alt="" /></div><p><b>Searching</b><span class="dim">Searching the web or reading code</span></p></div>
+      <div><div class="pics"><img src="media/duck/other.png" alt="" /></div><p><b>Using a tool</b><span class="dim">Using some other tool, or thinking right after you send a message</span></p></div>
+      <div><div class="pics"><img src="media/duck/awaiting-input.png" alt="" /></div><p><b>Waiting on you</b><span class="dim">Needs your answer or permission to keep going</span></p></div>
+      <div><div class="pics"><img src="media/duck/error.png" alt="" /></div><p><b>Error</b><span class="dim">Something it tried failed</span></p></div>
+      <div><div class="pics"><img src="media/duck/eureka.png" alt="" /></div><p><b>Task complete</b><span class="dim">Finished a turn that did real work</span></p></div>
+      <div><div class="pics"><img src="media/duck/committing-bride.png" alt="" /><img src="media/duck/committing-groom.png" alt="" /></div><p><b>Committing</b><span class="dim">Committing code</span></p></div>
+      <div><div class="pics"><img src="media/duck/pulling.png" alt="" /></div><p><b>Pulling</b><span class="dim">Pulling down the latest code</span></p></div>
+      <div><div class="pics"><img src="media/duck/pushing.png" alt="" /></div><p><b>Pushing</b><span class="dim">Pushing code up</span></p></div>
+      <div><div class="pics"><img src="media/duck/testing.png" alt="" /></div><p><b>Running tests</b><span class="dim">Running the test suite</span></p></div>
+      <div><div class="pics"><img src="media/duck/compressing.png" alt="" /></div><p><b>Compressing</b><span class="dim">Zipping up files, or compacting its own memory</span></p></div>
+      <div><div class="pics"><img src="media/duck/sleepy.png" alt="" /></div><p><b>Sleepy</b><span class="dim">Nothing has happened for 5 minutes; any activity wakes it right back up</span></p></div>
+      <div><div class="pics"><img src="media/duck/butt.png" alt="" /></div><p><b>Session ending</b><span class="dim">Shown for a moment right before the duck leaves</span></p></div>
+    </div>
+
+    <p class="dim">Shown here in yellow. The actual color depends on the project.</p>
+
+    <h2>Colors</h2>
+
+    <p>The first time you use Claude Code in a project, its duck gets a random color, avoiding colors other open sessions are already using. That project keeps the same color from then on.</p>
+
+    <div class="colors ducks">
+      <figure><img src="media/duck/color-yellow.png" alt="yellow duck" /><figcaption class="dim">yellow</figcaption></figure>
+      <figure><img src="media/duck/color-blue.png" alt="blue duck" /><figcaption class="dim">blue</figcaption></figure>
+      <figure><img src="media/duck/color-babyblue.png" alt="baby blue duck" /><figcaption class="dim">baby blue</figcaption></figure>
+      <figure><img src="media/duck/color-gray.png" alt="gray duck" /><figcaption class="dim">gray</figcaption></figure>
+      <figure><img src="media/duck/color-green.png" alt="green duck" /><figcaption class="dim">green</figcaption></figure>
+      <figure><img src="media/duck/color-lavender.png" alt="lavender duck" /><figcaption class="dim">lavender</figcaption></figure>
+      <figure><img src="media/duck/color-orange.png" alt="orange duck" /><figcaption class="dim">orange</figcaption></figure>
+      <figure><img src="media/duck/color-pink.png" alt="pink duck" /><figcaption class="dim">pink</figcaption></figure>
+      <figure><img src="media/duck/color-tan.png" alt="tan duck" /><figcaption class="dim">tan</figcaption></figure>
+    </div>
+
+    <h2>Baby ducks</h2>
+
+    <ul>
+      <li>Each helper agent a session spawns gets a baby duck: same color as mama, 80% her size, sitting just to her left.</li>
+      <li>The baby shows up while it's working, does a quick eureka when it reports back, then disappears.</li>
+      <li>A session gets at most 3 babies at once, so a big burst of helpers doesn't take over the Dock.</li>
+      <li>The Dock doesn't let apps choose their own icon order, so to keep each family together with mama on the right, the whole family briefly flickers and regroups when a new baby joins.</li>
+    </ul>
+
+    <h2>Try it</h2>
+
+    <p>Dockling is free and runs on macOS. Download it at <a href="https://dockling.netlify.app" target="_blank" rel="noopener">dockling.netlify.app</a>.</p>
+
+    <p class="nav bottom"><a class="back" href="./">← back</a>   <a href="https://dockling.netlify.app" target="_blank" rel="noopener">get dockling →</a></p>
+  </main>
+  </div></div>
+
+  <script>
+    // focus the screen so arrow keys / space scroll it on desktop
+    document.getElementById('scroll').focus({ preventScroll: true });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') location.href = './';
+    });
+  </script>
+</body>
+</html>
