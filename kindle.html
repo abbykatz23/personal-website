@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kindle Dashboard</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <meta name="description" content="A personal e-ink dashboard on a jailbroken Kindle Paperwhite that shows my running plan, AI coaching notes and upcoming birthdays." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://abbykatz.netlify.app/kindle.html" />
+  <meta property="og:title" content="Kindle Dashboard" />
+  <meta property="og:description" content="A personal e-ink dashboard on a jailbroken Kindle Paperwhite that shows my running plan, AI coaching notes and upcoming birthdays." />
+  <meta property="og:image" content="https://abbykatz.netlify.app/media/kindle/kindle.jpg" />
+  <style>
+    :root {
+      --green: #33ff66;
+      --dim: #1f9e40;
+      --bg: #000;
+      --bezel: #161616;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* same CRT screen as the home page: the rounded .screen is the scroll area */
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background: var(--bezel);
+    }
+
+    body {
+      font-family: "DejaVu Sans Mono", "Menlo", "Consolas", "Courier New", monospace;
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--green);
+      text-shadow: 0 0 4px rgba(51, 255, 102, 0.55);
+      padding: 8px;
+    }
+
+    .screen {
+      position: relative;
+      height: 100%;
+      border-radius: 40px / 32px;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    .screen::before,
+    .screen::after {
+      content: "";
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      border-radius: inherit;
+    }
+
+    .screen::before {
+      box-shadow:
+        inset 0 0 140px rgba(0, 0, 0, 0.85),
+        inset 0 0 3px rgba(51, 255, 102, 0.25);
+      background: radial-gradient(ellipse at center, rgba(51, 255, 102, 0.06) 0%, transparent 65%);
+    }
+
+    .screen::after {
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0,
+        rgba(0, 0, 0, 0) 2px,
+        rgba(0, 0, 0, 0.25) 3px
+      );
+    }
+
+    .scroll {
+      height: 100%;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 32px 28px;
+      scrollbar-width: none;
+      outline: none;
+    }
+    .scroll::-webkit-scrollbar { display: none; }
+
+    @media (hover: none), (max-width: 600px) {
+      html, body { height: auto; overflow: visible; background: var(--bg); }
+      body { padding: 24px 16px; }
+      .screen, .scroll { height: auto; overflow: visible; border-radius: 0; padding: 0; }
+      .screen::before, .screen::after { display: none; }
+    }
+
+    main { max-width: 760px; }
+
+    .dim { color: var(--dim); }
+
+    a { color: inherit; }
+    a:hover { background: var(--green); color: var(--bg); text-shadow: none; }
+
+    h1, h2 { font-size: inherit; font-weight: bold; }
+    h1 { margin-bottom: 1.6em; }
+    h2 { margin: 2.4em 0 0.8em; }
+    h2::before { content: "## "; color: var(--dim); }
+
+    p, ul, figure { margin-bottom: 1.2em; }
+
+    ul { list-style: none; }
+    li { padding-left: 2ch; text-indent: -2ch; margin-bottom: 0.6em; }
+    li::before { content: "- "; color: var(--dim); }
+
+
+    figure img, figure video {
+      display: block;
+      max-width: 100%;
+      max-height: 75vh;
+      width: auto;
+      height: auto;
+      border: 1px solid var(--dim);
+      background: #000;
+    }
+
+    figcaption { margin-top: 0.4em; font-size: 0.875em; }
+
+    .nav { margin-bottom: 1.6em; }
+
+    .back {
+      display: inline-block;
+      border: 1px solid var(--green);
+      padding: 0 1ch;
+      margin-right: 2ch;
+      text-decoration: none;
+    }
+    .nav.bottom { margin: 2.4em 0 0; }
+
+  </style>
+</head>
+<body>
+  <div class="screen"><div class="scroll" id="scroll" tabindex="-1">
+  <main>
+    <p class="nav"><a class="back" href="./">← back</a> <span class="dim">(or press Esc)</span></p>
+
+    <h1>Kindle Dashboard</h1>
+
+    <p>A personal e-ink dashboard running on a jailbroken Kindle Paperwhite. It shows my running plan (with AI coaching) and upcoming birthdays, refreshes every 30 minutes, and I can tap the screen to switch between views.</p>
+
+    <p>You can see exactly what's on my Kindle right now at <a href="https://kindlepreview.pre-idea.com" target="_blank" rel="noopener">kindlepreview.pre-idea.com</a>!</p>
+
+    <h2>Well... this is what it looks like</h2>
+
+    <figure>
+      <img src="media/kindle/kindle.jpg" width="1200" height="1600" loading="lazy" alt="The Kindle on the wall showing my last run with a route map, and upcoming birthdays" />
+    </figure>
+
+    <h2>Why</h2>
+
+    <p>I wanted an always-on screen next to my desk that shows the things I check every day (today's run, upcoming birthdays, etc.) I was going to buy an actual e-ink display and use that, but then felt cheap and decided to buy a 10 year old kindle on amazon instead :P</p>
+
+    <h2>What it does</h2>
+
+    <ul>
+      <li><b>Running plan:</b> a multi-week training plan that Claude builds from a short conversation about my goals. Every day it compares the run I was supposed to do with the run I actually did, and Claude writes a short coaching note. It also adjusts the next day's run if I was naughty and ran more or less than I was meant to. If I'm not training for anything, there's no AI coaching and it just shows my latest run.</li>
+      <li><b>Birthdays:</b> upcoming birthdays show up on the dashboard.</li>
+      <li><b>Touch navigation:</b> tapping a section opens a more detailed view (e.g. tapping the running section shows the full week).</li>
+      <li><b>Web page:</b> a small website where I can edit my plan and birthdays from a browser, even when I'm not home (and only I can get in).</li>
+    </ul>
+
+    <h2>How it fits together</h2>
+
+    <figure>
+      <a href="media/kindle/architecture.png" target="_blank" rel="noopener"><img src="media/kindle/architecture.png" width="2736" height="1248" loading="lazy" alt="Diagram of how the Raspberry Pi, the Kindle and the web page connect" /></a>
+      <figcaption class="dim">click to enlarge, or <a href="https://excalidraw.com/#json=8G8CLpjyidtB5qVa8PFEr,Z4pU58nCj_xEU8AoMPspVA" target="_blank" rel="noopener">open it in Excalidraw</a></figcaption>
+    </figure>
+
+    <p class="nav bottom"><a class="back" href="./">← back</a>   <a href="https://kindlepreview.pre-idea.com" target="_blank" rel="noopener">see it live →</a></p>
+  </main>
+  </div></div>
+
+  <script>
+    // focus the screen so arrow keys / space scroll it on desktop
+    document.getElementById('scroll').focus({ preventScroll: true });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') location.href = './';
+    });
+  </script>
+</body>
+</html>
